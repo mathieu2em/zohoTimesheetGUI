@@ -40,7 +40,7 @@ def main():
 
 
     # Create the Window
-    window = sg.Window('The FuckYouTimesheets Program', layout)
+    window = sg.Window('Zoho Timesheet GUI', layout)
 
     layout = 1  # The currently visible layout
     # Event Loop to process "events" and get the "values" of the inputs
@@ -65,7 +65,7 @@ def main():
             task_id = config['task_rencontre']
         if event == 'Soutien Technique Interne':
             task_id = config['task_sout_int']
-        if event == 'Create today timesheet':
+        if event == 'Create timesheet':
             note = values[0]
             log_time = values[4]
             taskdate = values[1] + '-' + values[2] + '-' + values[3]
@@ -80,7 +80,15 @@ def main():
 
 # calls the node cli.js process to go do the oauth2 code flow and get back the access token from it
 def getToken():
-    result = subprocess.run(['node', 'cli.js'], capture_output=True)
+    # to decide which node process package we need to use
+    if sys.platform.startswith('linux'):
+        nodeProcessFile = 'zohotimesheetgui-linux'
+    elif sys.platform.startswith('win32'):
+        nodeProcessFile = 'zohotimesheetgui-win.exe'
+    elif sys.platform.startswith('darwin'):
+        nodeProcessFile = 'zohotimesheetgui-macos'
+    
+    result = subprocess.run([nodeProcessFile], capture_output=True)
     access_token = result.stdout.decode()
     print(access_token)
     return access_token
