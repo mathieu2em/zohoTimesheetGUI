@@ -75,7 +75,7 @@ const server = http.createServer((req, res) => {
         return acc
       }, params)
   }
-  res.end('<HTML><HEAD><TITLE>Zoho OAuth2 Tool</TITLE></HEAD><BODY>Check your console :-)</BODY></HTML>', 'utf-8')
+  res.end('<HTML><HEAD><TITLE>Zoho OAuth2 Tool</TITLE></HEAD><BODY> we have now acquired our token ! :D </BODY></HTML>', 'utf-8')
 
   if (params.code) {
     tradeCodeForToken(params.code)
