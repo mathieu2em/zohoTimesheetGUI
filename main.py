@@ -9,7 +9,7 @@ import time
 import webbrowser
 from datetime import date
 
-sg.theme('DarkAmber')   # Add a touch of color
+sg.theme('DarkBlue16')   # Add a touch of color
 
 
 
@@ -33,7 +33,7 @@ def main():
                 [sg.Text('Date of the timesheet : aaaa-mm-dd'), sg.InputText(today[0], size=(4,1)), sg.InputText(today[1], size=(2,1)), sg.InputText(today[2], size=(2,1))],
                 [sg.Text('how much time did you work ? (default 07:30)'), sg.InputText('07:30', size=(5,4))],
                 [sg.Checkbox('is billable', default=False)],
-                [sg.Button('Create today timesheet')]]
+                [sg.Button('Create timesheet')]]
 
     # ----------- Create actual layout using Columns and a row of Buttons
     layout = [[sg.Column(layout1, key='-COL1-'), sg.Column(layout2, visible=False, key='-COL2-')]]
