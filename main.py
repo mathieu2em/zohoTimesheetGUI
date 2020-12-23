@@ -3,10 +3,11 @@ import sys  # For simplicity, we'll read config file from 1st CLI param sys.argv
 import json
 import logging
 import subprocess
-
+import urllib
 import requests
 import time
 import webbrowser
+from datetime import date
 
 sg.theme('DarkAmber')   # Add a touch of color
 
@@ -16,16 +17,21 @@ def main():
     global config
     global access_token
     global user_id
-    global task_id
+    global task_id 
     config = json.load(open("credentials.json"))
+
+    task_id = config['task_prog_cap']
+    today = date.today().strftime("%Y-%m-%d").split('-')
 
     # ----------- Create the 3 layouts this Window will display -----------
     layout1 = [[sg.Text('First, you have to get a token from zoho')],
                 [sg.Button('Ok'), sg.Button('Exit')]]
 
-    layout2 = [[sg.Text('enter the tasks you did today'), sg.InputText()],
+    layout2 = [[sg.Text('enter the tasks you did today'), sg.InputText(size=(100,5))],
                 [sg.Text('click on the corresponding task'), sg.Button('Programmation - Capitalisable'), sg.Button('Analyse - Capitalisable'), sg.Button('Rencontre'), sg.Button('Soutien Technique Interne')],
-                [sg.Text('how much time did you work today ? (default 7.5)'), sg.InputText()],
+                [sg.Text('Date of the timesheet : aaaa-mm-dd'), sg.InputText(today[0], size=(4,1)), sg.InputText(today[1], size=(2,1)), sg.InputText(today[2], size=(2,1))],
+                [sg.Text('how much time did you work ? (default 07:30)'), sg.InputText('07:30', size=(5,1))],
+                [sg.Checkbox('is billable', default=False)],
                 [sg.Button('Create today timesheet')]]
 
     # ----------- Create actual layout using Columns and a row of Buttons
@@ -42,10 +48,10 @@ def main():
         print(event, values)
         if event in (None, 'Exit'):
             break
+        # routine de retrait du access token
         if event == 'Ok':
             access_token = getToken()
             user_id = getCurrentUser(access_token)
-
 
             window[f'-COL{layout}-'].update(visible=False)
             layout = layout + 1 if layout < 2 else 1
@@ -59,7 +65,15 @@ def main():
         if event == 'Soutien Technique Interne':
             task_id = config['task_sout_int']
         if event == 'Create today timesheet':
-            produceTimesheet()
+            note = values[0]
+            log_time = values[4]
+            taskdate = values[1] + '-' + values[2] + '-' + values[3]
+            billable = values[5]
+            response = produceTimesheet(user_id, task_id, access_token, log_time, taskdate, billable, note)
+            if response["code"] == 0:
+                sg.popup_ok('your timesheet has been successfully created !')
+            else:
+                sg.popup_ok('something went wrong (maybe the time format ? should be 00:00) ')
 
     window.close()
 
@@ -85,26 +99,28 @@ def getCurrentUser(access_token):
     print(userID)
     return userID
 
-def produceTimesheet():
+def produceTimesheet(userID, task_id, access_token, log_time, date, billable, note):
 
     url = "https://books.zoho.com/api/v3/projects/timeentries?organization_id=669075739"
 
-    payload={'project_id': '1408740000003723131',
-    'task_id': '1408740000003723390',
-    'user_id': '1408740000003723390',
-    'log_date': '2020-12-24',
-    'log_time': '07:30',
-    'note': 'blablabla'}
+    payload={'JSONString':json.dumps({
+        'project_id': '1408740000003723131',
+        'task_id': task_id,
+        'user_id': userID,
+        'log_date': date,
+        'log_time': log_time,
+        'is_billable': billable,
+        'notes': note})}
 
     headers = {
-        'Authorization': 'Zoho-oauthtoken 1000.4ea98ce1be9a6d5959bf6495e443ab2e.1de7bdf29f1f1424190dc71ea26355cf',
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Cookie': 'stk=567c8fc659f3915622145aeb7c09a64d; ba05f91d88=2d12156dff1cddc63ec0fafe285ed2a4; zbcscook=11de33d1-3853-44c4-9dff-364cddc40635; _zcsr_tmp=11de33d1-3853-44c4-9dff-364cddc40635; ZohoBooksRef=https://books.zoho.com/oauth/v2/token?grant_type=authorization_code&client_id=1000.SXN2Y98RNA1M3N3OPI95GQ3VVFX8OX&client_secret=582d2cdb0e4bb366068b997b375f62d6217df28aa4&redirect_uri=https://google.com&code=1000.89a071e6726751d5eb427f4562ac92e0.b41c46b41df2da07ac273fce1be3e9f1; ZohoBooksPageURL=https://books.zoho.com/; JSESSIONID=00C99E0DC1A658F3567A57367C62E97C'
+        'Authorization': 'Zoho-oauthtoken ' + access_token,
+        'Content-Type': 'application/x-www-form-urlencoded'
         }
 
-    response = requests.request("POST", url, headers=headers, data=payload)
+    response = requests.post( url, data=urllib.parse.urlencode(payload), headers=headers)
 
     print(response.text)
+    return response.json()
 
 
 main()
