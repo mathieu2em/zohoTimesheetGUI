@@ -27,10 +27,11 @@ def main():
     layout1 = [[sg.Text('First, you have to get a token from zoho')],
                 [sg.Button('Ok'), sg.Button('Exit')]]
 
-    layout2 = [[sg.Text('enter the tasks you did today'), sg.InputText(size=(100,5))],
+    layout2 = [
+                [sg.Multiline('enter the tasks you did today', size=(100,5))],
                 [sg.Text('click on the corresponding task'), sg.Button('Programmation - Capitalisable'), sg.Button('Analyse - Capitalisable'), sg.Button('Rencontre'), sg.Button('Soutien Technique Interne')],
                 [sg.Text('Date of the timesheet : aaaa-mm-dd'), sg.InputText(today[0], size=(4,1)), sg.InputText(today[1], size=(2,1)), sg.InputText(today[2], size=(2,1))],
-                [sg.Text('how much time did you work ? (default 07:30)'), sg.InputText('07:30', size=(5,1))],
+                [sg.Text('how much time did you work ? (default 07:30)'), sg.InputText('07:30', size=(5,4))],
                 [sg.Checkbox('is billable', default=False)],
                 [sg.Button('Create today timesheet')]]
 
