@@ -1,15 +1,14 @@
 import PySimpleGUI as sg
 import sys  # For simplicity, we'll read config file from 1st CLI param sys.argv[1]
 import json
-import logging
 import subprocess
 import urllib
 import requests
-import time
 import webbrowser
+import os
 from datetime import date
 
-sg.theme('DarkBlue16')   # Add a touch of color
+sg.theme('DarkBlue16')   # Add a touch of color.
 
 
 
@@ -18,40 +17,43 @@ def main():
     global access_token
     global user_id
     global task_id 
-    config = json.load(open("credentials.json"))
+    config = json.load(open(resource_path("credentials.json")))
 
     task_id = config['task_prog_cap']
     today = date.today().strftime("%Y-%m-%d").split('-')
 
-    # ----------- Create the 3 layouts this Window will display -----------
+    # ----------- Create the 3 layouts this Window will display. -----------
     layout1 = [[sg.Text('First, you have to get a token from zoho')],
                 [sg.Button('Ok'), sg.Button('Exit')]]
 
-    layout2 = [
-                [sg.Multiline('enter the tasks you did today', size=(100,5))],
-                [sg.Text('click on the corresponding task'), sg.Button('Programmation - Capitalisable'), sg.Button('Analyse - Capitalisable'), sg.Button('Rencontre'), sg.Button('Soutien Technique Interne')],
+    layout2 = [ [sg.Text('Enter the tasks you did today.')],
+                [sg.Multiline('', size=(110,5))],
+                [sg.Text('Click on the corresponding task:'), sg.Button('Programmation - Capitalisable'), sg.Button('Analyse - Capitalisable'), sg.Button('Rencontre'), sg.Button('Soutien Technique Interne')],
                 [sg.Text('Date of the timesheet : aaaa-mm-dd'), sg.InputText(today[0], size=(4,1)), sg.InputText(today[1], size=(2,1)), sg.InputText(today[2], size=(2,1))],
-                [sg.Text('how much time did you work ? (default 07:30)'), sg.InputText('07:30', size=(5,4))],
-                [sg.Checkbox('is billable', default=False)],
+                [sg.Text('How much time did you do this task ? (Default 07:30)'), sg.InputText('07:30', size=(5,4))],
+                [sg.Checkbox('Is billable', default=False)],
                 [sg.Button('Create timesheet')]]
 
-    # ----------- Create actual layout using Columns and a row of Buttons
+    # ----------- Create actual layout using Columns and a row of Buttons.
     layout = [[sg.Column(layout1, key='-COL1-'), sg.Column(layout2, visible=False, key='-COL2-')]]
 
 
-    # Create the Window
+    # Create the Window.
     window = sg.Window('Zoho Timesheet GUI', layout)
 
-    layout = 1  # The currently visible layout
-    # Event Loop to process "events" and get the "values" of the inputs
+    layout = 1  # The currently visible layout.
+    # Event Loop to process "events" and get the "values" of the inputs.
     while True:
         event, values = window.read()
-        print(event, values)
+        # For test purpose.
+        # print(event, values)
         if event in (None, 'Exit'):
             break
-        # routine de retrait du access token
+        # Get the access token.
         if event == 'Ok':
+            # Call a node js executable.
             access_token = getToken()
+            # needed for 
             user_id = getCurrentUser(access_token)
 
             window[f'-COL{layout}-'].update(visible=False)
@@ -70,13 +72,40 @@ def main():
             log_time = values[4]
             taskdate = values[1] + '-' + values[2] + '-' + values[3]
             billable = values[5]
-            response = produceTimesheet(user_id, task_id, access_token, log_time, taskdate, billable, note)
-            if response["code"] == 0:
-                sg.popup_ok('your timesheet has been successfully created !')
-            else:
-                sg.popup_ok('something went wrong (maybe the time format ? should be 00:00) ')
+
+            responseSuccess = False
+            while not responseSuccess:
+                response = produceTimesheet(user_id, task_id, access_token, log_time, taskdate, billable, note)
+                if response["code"] == 0:
+                    sg.popup_ok('your timesheet has been successfully created !')
+                    responseSuccess = True
+                elif response["code"] == 401:
+                    sg.popup_ok('the authentication expired (currently takes 1 hour to expire) click ok to get another one.')
+                    access_token = getToken()
+                else:
+                    # Not a success but get out of the loop anyway.
+                    responseSuccess = True
+                
 
     window.close()
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+def popen(cmd: str) -> str:
+    """For pyinstaller -w"""
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    process = subprocess.Popen(cmd,startupinfo=startupinfo, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+
+    return process.stdout.read()
 
 # calls the node cli.js process to go do the oauth2 code flow and get back the access token from it
 def getToken():
@@ -88,9 +117,11 @@ def getToken():
     elif sys.platform.startswith('darwin'):
         nodeProcessFile = 'zohotimesheetgui-macos'
     
-    result = subprocess.run([nodeProcessFile], capture_output=True)
-    access_token = result.stdout.decode()
-    print(access_token)
+    # result = subprocess.run([resource_path(nodeProcessFile)], capture_output=True, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+    result = popen(resource_path(nodeProcessFile))
+    
+    access_token = result.decode()
+    # print(access_token)
     return access_token
 
 # calls zoho api with access token to get current user id
@@ -105,7 +136,7 @@ def getCurrentUser(access_token):
 
     response = requests.request("GET", url, headers=headers, data=payload).json()
     userID = response['user']["user_id"]
-    print(userID)
+    # print(userID)
     return userID
 
 def produceTimesheet(userID, task_id, access_token, log_time, date, billable, note):
@@ -128,7 +159,7 @@ def produceTimesheet(userID, task_id, access_token, log_time, date, billable, no
 
     response = requests.post( url, data=urllib.parse.urlencode(payload), headers=headers)
 
-    print(response.text)
+    # print(response.text)
     return response.json()
 
 
