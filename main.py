@@ -53,12 +53,16 @@ def main():
         if event == 'Ok':
             # Call a node js executable.
             access_token = getToken()
-            # needed for 
+            # Needed for api call for timesheet creation.
             user_id = getCurrentUser(access_token)
 
+            # This is part of the logic making the first page (layout 1) invisible. And second page ( layout 2 ) visible.
             window[f'-COL{layout}-'].update(visible=False)
             layout = layout + 1 if layout < 2 else 1
             window[f'-COL{layout}-'].update(visible=True)
+
+        # The buttons for the task, use the task ID that I manually entered in credentials.
+        # todo : Make this part automatic from api call to available tasks ?
         if event == 'Programmation - Capitalisable':
             task_id = config['task_prog_cap']
         if event == 'Analyse - Capitalisable':
@@ -67,12 +71,16 @@ def main():
             task_id = config['task_rencontre']
         if event == 'Soutien Technique Interne':
             task_id = config['task_sout_int']
+        # The timesheet creation event being triggered, we extract infos to send with api call.
         if event == 'Create timesheet':
             note = values[0]
+            # How much time the user executed his task.
             log_time = values[4]
+            # Date formatting YYYY-MM-DD
             taskdate = values[1] + '-' + values[2] + '-' + values[3]
+            # A boolean value.
             billable = values[5]
-
+            # A little loop for error handling in case token is expired.
             responseSuccess = False
             while not responseSuccess:
                 response = produceTimesheet(user_id, task_id, access_token, log_time, taskdate, billable, note)
@@ -89,6 +97,7 @@ def main():
 
     window.close()
 
+# Needed because of a bug with pyinstaller file path when using --add-data on windows
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
     try:
@@ -96,13 +105,15 @@ def resource_path(relative_path):
         base_path = sys._MEIPASS
     except Exception:
         base_path = os.path.abspath(".")
-
     return os.path.join(base_path, relative_path)
 
+# Needed because that we have to read from stdout but we do not want a visible console to the user as it is ugly.
+# found this solution deep deep deep in the web. Not sure of the usefullness of the startupinfo part. TODO to investigate
 def popen(cmd: str) -> str:
     """For pyinstaller -w"""
     startupinfo = subprocess.STARTUPINFO()
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    # Tell std*s to use PIPE as the links must be created.
     process = subprocess.Popen(cmd,startupinfo=startupinfo, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
 
     return process.stdout.read()
@@ -117,14 +128,12 @@ def getToken():
     elif sys.platform.startswith('darwin'):
         nodeProcessFile = 'zohotimesheetgui-macos'
     
-    # result = subprocess.run([resource_path(nodeProcessFile)], capture_output=True, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
     result = popen(resource_path(nodeProcessFile))
-    
+    # as it is byte encoded, decode it.
     access_token = result.decode()
-    # print(access_token)
     return access_token
 
-# calls zoho api with access token to get current user id
+# Calls zoho api with access token to get current user id.
 def getCurrentUser(access_token):
     url = "https://books.zoho.com/api/v3/users/me"
 
@@ -136,7 +145,7 @@ def getCurrentUser(access_token):
 
     response = requests.request("GET", url, headers=headers, data=payload).json()
     userID = response['user']["user_id"]
-    # print(userID)
+
     return userID
 
 def produceTimesheet(userID, task_id, access_token, log_time, date, billable, note):
@@ -159,8 +168,6 @@ def produceTimesheet(userID, task_id, access_token, log_time, date, billable, no
 
     response = requests.post( url, data=urllib.parse.urlencode(payload), headers=headers)
 
-    # print(response.text)
     return response.json()
-
 
 main()
