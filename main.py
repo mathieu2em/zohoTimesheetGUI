@@ -10,31 +10,56 @@ from datetime import date
 
 sg.theme('DarkBlue16')   # Add a touch of color.
 
-
-
 def main():
     global config
     global access_token
     global user_id
     global task_id 
+    global project_id
     config = json.load(open(resource_path("credentials.json")))
 
-    task_id = config['task_prog_cap']
     today = date.today().strftime("%Y-%m-%d").split('-')
 
-    # ----------- Create the 3 layouts this Window will display. -----------
-    layout1 = [[sg.Text('First, you have to get a token from zoho')],
-                [sg.Button('Ok'), sg.Button('Exit')]]
+    # ----------- Create the 2 layouts this Window will display. -----------
 
+    # The first page for acquiring the token.
+    layout1 = [[sg.Text('First, you have to get a token from zoho')],
+                [sg.Button('Ok', key='lay-1-ok-btn'), sg.Button('Exit')]]
+
+    # The second page for creating the timesheet.
     layout2 = [ [sg.Text('Enter the tasks you did today.')],
                 [sg.Multiline('', size=(110,5))],
-                [sg.Text('Click on the corresponding task:'), sg.Button('Programmation - Capitalisable'), sg.Button('Analyse - Capitalisable'), sg.Button('Rencontre'), sg.Button('Soutien Technique Interne')],
+                # Task choosing menu 
+                # TODO : there is a BETTER way to do it and I know it.
+                [sg.Text('Click on the corresponding task:')],
+                # SPECTRA - TASKS
+                [sg.Text('SpectrA: '), 
+                 sg.Button('Programmation - Capitalisable',       key='sp-1'),
+                 sg.Button('Analyse - Capitalisable',             key='sp-2'),
+                 sg.Button('Rencontre',                           key='sp-3'),
+                 sg.Button('Soutien Technique Interne',           key='sp-4'),
+                 sg.Button('Controle de qualité - Capitalisable', key='sp-5')
+                 ],
+                # ADMIN TASKS
+                [sg.Text('Administration: '),
+                 sg.Button('Administration - Générale', key='ad-1'),
+                 sg.Button('Jour férié',                key='ad-2'),
+                 sg.Button('Absence pour maladie',      key='ad-3'),
+                 sg.Button('Vacances',                  key='ad-4')
+                 ],
+                # EDILEXPERT TASKS
+                [sg.Text('Edilexpert'), 
+                sg.Button('Analyse',       key='ex-1'), 
+                sg.Button('Programmation', key='ex-2')],
+                # TIME OPTIONS
                 [sg.Text('Date of the timesheet : aaaa-mm-dd'), sg.InputText(today[0], size=(4,1)), sg.InputText(today[1], size=(2,1)), sg.InputText(today[2], size=(2,1))],
                 [sg.Text('How much time did you do this task ? (Default 07:30)'), sg.InputText('07:30', size=(5,4))],
+                # MISC
                 [sg.Checkbox('Is billable', default=False)],
+
                 [sg.Button('Create timesheet')]]
 
-    # ----------- Create actual layout using Columns and a row of Buttons.
+    # ----------- Create actual layout using Columns.
     layout = [[sg.Column(layout1, key='-COL1-'), sg.Column(layout2, visible=False, key='-COL2-')]]
 
 
@@ -46,11 +71,11 @@ def main():
     while True:
         event, values = window.read()
         # For test purpose.
-        # print(event, values)
+        print(event, values)
         if event in (None, 'Exit'):
             break
         # Get the access token.
-        if event == 'Ok':
+        elif event == 'lay-1-ok-btn':
             # Call a node js executable.
             access_token = getToken()
             # Needed for api call for timesheet creation.
@@ -63,39 +88,69 @@ def main():
 
         # The buttons for the task, use the task ID that I manually entered in credentials.
         # todo : Make this part automatic from api call to available tasks ?
-        if event == 'Programmation - Capitalisable':
-            task_id = config['task_prog_cap']
-        if event == 'Analyse - Capitalisable':
-            task_id = config['task_anal_cap']
-        if event == 'Rencontre':
-            task_id = config['task_rencontre']
-        if event == 'Soutien Technique Interne':
-            task_id = config['task_sout_int']
+        elif 'sp-' in event:
+            project_id = config['project_id_spectra']
+            task_id = task_assign(event)
+        elif 'ex-' in event:
+            project_id = config['project_id_edilexpert']
+            task_id = task_assign(event)
+        elif 'ad-' in event:
+            project_id = config['project_id_administration']
+            task_id = task_assign(event)
+            
         # The timesheet creation event being triggered, we extract infos to send with api call.
-        if event == 'Create timesheet':
-            note = values[0]
-            # How much time the user executed his task.
-            log_time = values[4]
-            # Date formatting YYYY-MM-DD
-            taskdate = values[1] + '-' + values[2] + '-' + values[3]
-            # A boolean value.
-            billable = values[5]
-            # A little loop for error handling in case token is expired.
-            responseSuccess = False
-            while not responseSuccess:
-                response = produceTimesheet(user_id, task_id, access_token, log_time, taskdate, billable, note)
-                if response["code"] == 0:
-                    sg.popup_ok('your timesheet has been successfully created !')
-                    responseSuccess = True
-                elif response["code"] == 401:
-                    sg.popup_ok('the authentication expired (currently takes 1 hour to expire) click ok to get another one.')
-                    access_token = getToken()
-                else:
-                    # Not a success but get out of the loop anyway.
-                    responseSuccess = True
+        elif event == 'Create timesheet':
+
+            # Conditional on selection of which task to send to which project by user.
+            if not task_id:
+                sg.popup_ok('YOU MUST SELECT A TASK BEFORE SENDING SHEET')
+            else:
+                note = values[0]
+                # How much time the user executed his task.
+                log_time = values[4]
+                # Date formatting YYYY-MM-DD
+                taskdate = values[1] + '-' + values[2] + '-' + values[3]
+                # A boolean value.
+                billable = values[5]
+                # A little loop for error handling in case token is expired.
+                responseSuccess = False
+                while not responseSuccess:
+                    response = produceTimesheet(project_id, user_id, task_id, access_token, log_time, taskdate, billable, note)
+                    print(response)
+                    if response["code"] == 0:
+                        sg.popup_ok('your timesheet has been successfully created !')
+                        responseSuccess = True
+                    elif response["code"] == 401:
+                        sg.popup_ok('the authentication expired (currently takes 1 hour to expire) click ok to get another one.')
+                        access_token = getToken()
+                    else:
+                        sg.popup_ok(response['message'])
+                        # Not a success but get out of the loop anyway.
+                        responseSuccess = True
                 
 
     window.close()
+
+# Assign the correct task_id dependent on button id pressed.
+def task_assign(taskButtonID):
+    switcher = {
+        'sp-1': config['task_sp_prog_cap'],
+        'sp-2': config['task_sp_anal_cap'],
+        'sp-3': config['task_sp_rencontre'],
+        'sp-4': config['task_sp_sout_tec'],
+        'sp-5': config['task_sp_QA_cap'],
+
+        'ad-1': config['task_admin_general'],
+        'ad-2': config['task_admin_jourferie'],
+        'ad-3': config['task_admin_maladie'],
+        'ad-4': config['task_admin_vacances'],
+
+        'ex-1': config['task_ex_anal'],
+        'ex-2': config['task_ex_prog']
+    }
+    result = switcher.get(taskButtonID, "TASK NOT FOUND")
+    print(result)
+    return result
 
 # Needed because of a bug with pyinstaller file path when using --add-data on windows
 def resource_path(relative_path):
@@ -136,6 +191,7 @@ def getToken():
     result = popen(resource_path(nodeProcessFile))
     # as it is byte encoded, decode it.
     access_token = result.decode()
+    print(access_token)
     return access_token
 
 # Calls zoho api with access token to get current user id.
@@ -144,23 +200,24 @@ def getCurrentUser(access_token):
 
     payload={}
     headers = {
-    'Authorization': 'Zoho-oauthtoken ' + access_token,
-    'Cookie': 'BuildCookie_669075739=1; stk=567c8fc659f3915622145aeb7c09a64d; ba05f91d88=2d12156dff1cddc63ec0fafe285ed2a4; zbcscook=11de33d1-3853-44c4-9dff-364cddc40635; _zcsr_tmp=11de33d1-3853-44c4-9dff-364cddc40635; ZohoBooksRef=https://books.zoho.com/oauth/v2/token?grant_type=authorization_code&client_id=1000.SXN2Y98RNA1M3N3OPI95GQ3VVFX8OX&client_secret=582d2cdb0e4bb366068b997b375f62d6217df28aa4&redirect_uri=https://google.com&code=1000.89a071e6726751d5eb427f4562ac92e0.b41c46b41df2da07ac273fce1be3e9f1; ZohoBooksPageURL=https://books.zoho.com/; JSESSIONID=00C99E0DC1A658F3567A57367C62E97C'
+    'Authorization': 'Zoho-oauthtoken ' + access_token
     }
 
     response = requests.request("GET", url, headers=headers, data=payload).json()
     userID = response['user']["user_id"]
-
+    print(userID)
     return userID
 
-def produceTimesheet(userID, task_id, access_token, log_time, date, billable, note):
-
-    url = "https://books.zoho.com/api/v3/projects/timeentries?organization_id=669075739"
+# Sends an api request to zoho in order to create a timesheet.
+def produceTimesheet(project_id, user_id, task_id, access_token, log_time, date, billable, note):
+    print('produceTimesheetMethodCalled')
+    url = "https://books.zoho.com/api/v3/projects/timeentries?organization_id=" + config["org_id"]
 
     payload={'JSONString':json.dumps({
-        'project_id': '1408740000003723131',
+        # TODO : should set it up so the user can choose between projects
+        'project_id': project_id,
         'task_id': task_id,
-        'user_id': userID,
+        'user_id': user_id,
         'log_date': date,
         'log_time': log_time,
         'is_billable': billable,
