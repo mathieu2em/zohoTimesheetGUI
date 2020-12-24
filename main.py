@@ -110,11 +110,16 @@ def resource_path(relative_path):
 # Needed because that we have to read from stdout but we do not want a visible console to the user as it is ugly.
 # found this solution deep deep deep in the web. Not sure of the usefullness of the startupinfo part. TODO to investigate
 def popen(cmd: str) -> str:
-    """For pyinstaller -w"""
-    startupinfo = subprocess.STARTUPINFO()
-    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-    # Tell std*s to use PIPE as the links must be created.
-    process = subprocess.Popen(cmd,startupinfo=startupinfo, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+    # Process are not working the same on linux
+    if not sys.platform.startswith('linux'):
+        # For pyinstaller -w
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        # Tell std*s to use PIPE as the links must be created.
+        process = subprocess.Popen(cmd,startupinfo=startupinfo, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+    else:
+        # Tell std*s to use PIPE as the links must be created.
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
 
     return process.stdout.read()
 
