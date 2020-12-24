@@ -82,7 +82,7 @@ def main():
 def getToken():
     # to decide which node process package we need to use
     if sys.platform.startswith('linux'):
-        nodeProcessFile = 'zohotimesheetgui-linux'
+        nodeProcessFile = './zohotimesheetgui-linux'
     elif sys.platform.startswith('win32'):
         nodeProcessFile = 'zohotimesheetgui-win.exe'
     elif sys.platform.startswith('darwin'):
