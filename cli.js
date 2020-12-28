@@ -7,7 +7,7 @@ const open = require('open');
 const { openStdin, stdin } = require('process');
 const { URL } = require('url');
 
-var config = require('./config.json');
+var config = require('./credentials.json');
 
 const HOST = process.env.ZOHO_REDIRECT_HOST || 'localhost';
 const PORT = process.env.ZOHO_REDIRECT_PORT || '8888';
