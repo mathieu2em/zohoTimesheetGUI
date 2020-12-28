@@ -16,6 +16,7 @@ def main():
     global user_id
     global task_id 
     global project_id
+    
     config = json.load(open(resource_path("credentials.json")))
 
     today = date.today().strftime("%Y-%m-%d").split('-')
