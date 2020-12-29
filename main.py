@@ -16,7 +16,11 @@ def main():
     global user_id
     global task_id 
     global project_id
-    
+
+    FONT_BIG = 'Any 12'
+    FONT = 'Any 10'
+    FONT_NUM = 'Helvetica 12'
+
     config = json.load(open(resource_path("credentials.json")))
 
     today = date.today().strftime("%Y-%m-%d").split('-')
@@ -24,48 +28,48 @@ def main():
     # ----------- Create the 2 layouts this Window will display. -----------
 
     # The first page for acquiring the token.
-    layout1 = [[sg.Text('First, you have to get a token from zoho')],
-                [sg.Button('Ok', key='lay-1-ok-btn'), sg.Button('Exit')]]
+    layout1 = [[sg.Text('First, you have to get a token from zoho', font=FONT_BIG)],
+                [sg.Button('Ok', key='lay-1-ok-btn', font=FONT_BIG), sg.Button('Exit', font=FONT_BIG)]]
 
     # The second page for creating the timesheet.
-    layout2 = [ [sg.Text('Enter the tasks you did today.')],
+    layout2 = [ [sg.Text('Enter the tasks you did today.', font=FONT_BIG)],
                 [sg.Multiline('', size=(110,5))],
                 # Task choosing menu 
                 # TODO : there is a BETTER way to do it and I know it.
-                [sg.Text('Click on the corresponding task:')],
+                [sg.Text('Click on the corresponding task:', font=FONT_BIG)],
                 # SPECTRA - TASKS
-                [sg.Text('SpectrA: '), 
-                 sg.Button('Programmation - Capitalisable',       key='sp-1'),
-                 sg.Button('Analyse - Capitalisable',             key='sp-2'),
-                 sg.Button('Rencontre',                           key='sp-3'),
-                 sg.Button('Soutien Technique Interne',           key='sp-4'),
-                 sg.Button('Controle de qualité - Capitalisable', key='sp-5')
+                [sg.Text('SpectrA: ', font=FONT), 
+                 sg.Button('Programmation - Capitalisable',       key='sp-1', font=FONT),
+                 sg.Button('Analyse - Capitalisable',             key='sp-2', font=FONT),
+                 sg.Button('Rencontre',                           key='sp-3', font=FONT),
+                 sg.Button('Soutien Technique Interne',           key='sp-4', font=FONT),
+                 sg.Button('Controle de qualité - Capitalisable', key='sp-5', font=FONT)
                  ],
                 # ADMIN TASKS
-                [sg.Text('Administration: '),
-                 sg.Button('Administration - Générale', key='ad-1'),
-                 sg.Button('Jour férié',                key='ad-2'),
-                 sg.Button('Absence pour maladie',      key='ad-3'),
-                 sg.Button('Vacances',                  key='ad-4')
+                [sg.Text('Administration: ', font=FONT),
+                 sg.Button('Administration - Générale', key='ad-1', font=FONT),
+                 sg.Button('Jour férié',                key='ad-2', font=FONT),
+                 sg.Button('Absence pour maladie',      key='ad-3', font=FONT),
+                 sg.Button('Vacances',                  key='ad-4', font=FONT)
                  ],
                 # EDILEXPERT TASKS
-                [sg.Text('Edilexpert'), 
-                sg.Button('Analyse',       key='ex-1'), 
-                sg.Button('Programmation', key='ex-2')],
+                [sg.Text('Edilexpert', font=FONT), 
+                sg.Button('Analyse',       key='ex-1', font=FONT), 
+                sg.Button('Programmation', key='ex-2', font=FONT)],
                 # TIME OPTIONS
-                [sg.Text('Date of the timesheet : aaaa-mm-dd'), sg.InputText(today[0], size=(4,1)), sg.InputText(today[1], size=(2,1)), sg.InputText(today[2], size=(2,1))],
-                [sg.Text('How much time did you do this task ? (Default 07:30)'), sg.InputText('07:30', size=(5,4))],
+                [sg.Text('Date of the timesheet : aaaa-mm-dd', font=FONT_BIG), sg.InputText(today[0], size=(4,1), font=FONT_NUM), sg.InputText(today[1], size=(2,1), font=FONT_NUM), sg.InputText(today[2], size=(2,1), font=FONT_NUM)],
+                [sg.Text('How much time did you do this task ? (Default 07:30)', font=FONT_BIG), sg.InputText('07:30', size=(5,4), font=FONT_NUM)],
                 # MISC
-                [sg.Checkbox('Is billable', default=False)],
+                [sg.Checkbox('Is billable', default=False, font=FONT_BIG)],
 
-                [sg.Button('Create timesheet')]]
+                [sg.Button('Create timesheet', font=FONT_BIG), sg.Button('Go to your zoho timesheets', font=FONT_BIG), sg.Button('Exit', font=FONT_BIG)]]
 
     # ----------- Create actual layout using Columns.
     layout = [[sg.Column(layout1, key='-COL1-'), sg.Column(layout2, visible=False, key='-COL2-')]]
 
 
     # Create the Window.
-    window = sg.Window('Zoho Timesheet GUI', layout)
+    window = sg.Window('Zoho Timesheet GUI', layout, icon=resource_path('logo.ico'), grab_anywhere=True)
 
     layout = 1  # The currently visible layout.
     # Event Loop to process "events" and get the "values" of the inputs.
@@ -73,7 +77,8 @@ def main():
         event, values = window.read()
         # For test purpose.
         print(event, values)
-        if event in (None, 'Exit'):
+        # The exit0 is needed as pysimplegui gives a different name for the layout2 exit button. (adds 0 at the end)
+        if event in (None, 'Exit', 'Exit0'):
             break
         # Get the access token.
         elif event == 'lay-1-ok-btn':
@@ -98,10 +103,11 @@ def main():
         elif 'ad-' in event:
             project_id = config['project_id_administration']
             task_id = task_assign(event)
-            
+        elif 'Go to your zoho timesheets':
+            webbrowser.open('https://books.zoho.com/app#/timesheet/alltimeentries?filter_by=Status.All%2CDate.ThisMonth&per_page=25&sort_column=task_name&sort_order=A', new=2)
         # The timesheet creation event being triggered, we extract infos to send with api call.
         elif event == 'Create timesheet':
-
+            
             # Conditional on selection of which task to send to which project by user.
             if not task_id:
                 sg.popup_ok('YOU MUST SELECT A TASK BEFORE SENDING SHEET')
