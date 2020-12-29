@@ -1,7 +1,9 @@
 # zohoTimesheetGUI
 an app to enter a day timemesheet task with comment in Zoho books timesheet directly from your pc!
 
-![image](https://user-images.githubusercontent.com/35858630/103106411-5338a700-4603-11eb-84dd-5da9228fe743.png)
+![image](https://user-images.githubusercontent.com/35858630/103262070-d0507d00-4971-11eb-88d2-7a8577419190.png)
+
+![timesheets3](https://user-images.githubusercontent.com/35858630/103262901-435af300-4974-11eb-82ae-b24e72c09095.gif)
 
 # how to use.
 
