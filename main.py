@@ -103,7 +103,7 @@ def main():
         elif 'ad-' in event:
             project_id = config['project_id_administration']
             task_id = task_assign(event)
-        elif 'Go to your zoho timesheets':
+        elif event == 'Go to your zoho timesheets':
             webbrowser.open('https://books.zoho.com/app#/timesheet/alltimeentries?filter_by=Status.All%2CDate.ThisMonth&per_page=25&sort_column=task_name&sort_order=A', new=2)
         # The timesheet creation event being triggered, we extract infos to send with api call.
         elif event == 'Create timesheet':
