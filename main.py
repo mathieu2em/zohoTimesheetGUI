@@ -173,7 +173,7 @@ def resource_path(relative_path):
 # found this solution deep deep deep in the web. Not sure of the usefullness of the startupinfo part. TODO to investigate
 def popen(cmd: str) -> str:
     # Process are not working the same on linux
-    if not sys.platform.startswith('linux'):
+    if not (sys.platform.startswith('linux') or sys.platform.startswith('darwin')):
         # For pyinstaller -w
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
@@ -191,11 +191,12 @@ def getToken():
     if sys.platform.startswith('linux'):
         nodeProcessFile = './zohotimesheetgui-linux'
     elif sys.platform.startswith('win32'):
-        nodeProcessFile = 'zohotimesheetgui-win.exe'
+        # resourcepath method used for win32 pyinstaller exception
+        nodeProcessFile = resource_path('zohotimesheetgui-win.exe')
     elif sys.platform.startswith('darwin'):
-        nodeProcessFile = 'zohotimesheetgui-macos'
+        nodeProcessFile = './zohotimesheetgui-macos'
     
-    result = popen(resource_path(nodeProcessFile))
+    result = popen(nodeProcessFile)
     # as it is byte encoded, decode it.
     access_token = result.decode()
     print(access_token)
