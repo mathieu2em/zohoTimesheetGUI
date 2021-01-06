@@ -204,7 +204,7 @@ def getToken():
 
 # Calls zoho api with access token to get current user id.
 def getCurrentUser(access_token):
-    url = "https://books.zoho.com/api/v3/users/me"
+    url = "https://books.zoho.com/api/v3/users/me?organization_id=" + config["org_id"]
 
     payload={}
     headers = {
