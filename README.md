@@ -1,5 +1,5 @@
 # zohoTimesheetGUI
-an app to enter a day timemesheet task with comment in Zoho books timesheet directly from your pc!
+An app to enter your timesheets directly from your computer and publish it to Zoho Timesheets via the Zoho api in an effective and fast way.
 
 ![image](https://user-images.githubusercontent.com/35858630/103262070-d0507d00-4971-11eb-88d2-7a8577419190.png)
 
